@@ -51,7 +51,7 @@ def stats(inPath, outPath):
         next(du)
         fbADI, sbADI = header.index(fbID+'.AD'), header.index(sbID+'.AD')
                 
-        header.extend([fbID+'.SI', sbID+'.SI', 'Delta.SI', 'DSI_CI', 'fisher_exact', 'G_test', 'GS_CI', 'chi', 'CS_CI'])
+        header.extend([fbID+'.SI', sbID+'.SI', 'Delta.SI', 'DSI_CI', 'fisher_exact'])
         xie.writerow(header)
 
         for line in du:
@@ -71,13 +71,7 @@ def stats(inPath, outPath):
                 delta_SI = sb_SI - fb_SI
                 fe = fisher_exact([fb_read, sb_read])
 
-                try:
-                    gt = chi2_contingency([fb_read, sb_read], correction=False, lambda_='log-likelihood')[0:2]
-                    chi = chi2_contingency([fb_read, sb_read], correction=False)[0:2]
-                except ValueError:
-                    gt, chi = (0.0,1.0), (0.0,1.0)
-
-                smDSI_List, smGT_List, smChi_List = [], [], []
+                smDSI_List = []
                 for __ in range(rep):
                     sm_fbAlt = np.random.binomial(fb_depth, fb_Freq)
                     sm_sbAlt = np.random.binomial(sb_depth, sb_Freq)
@@ -87,23 +81,12 @@ def stats(inPath, outPath):
                     smDSI = sm_sbSI - sm_fbSI
                     smDSI_List.append(smDSI)
 
-                    sm_Read = [[fb_depth-sm_fbAlt, sm_fbAlt], [sb_depth-sm_sbAlt, sm_sbAlt]]
-                    try:
-                        smGT = chi2_contingency(sm_Read, correction=False, lambda_='log-likelihood')[0]
-                        smChi = chi2_contingency(sm_Read, correction=False)[0]
-                    except ValueError:
-                        smGT, smChi = 0.0, 0.0
-                    smGT_List.append(smGT)
-                    smChi_List.append(smChi)
-
                 ciDSI = np.percentile(smDSI_List, [0.5, 99.5, 2.5, 97.5, 5.0, 95.0])
-                ciGT = np.percentile(smGT_List, [0.5, 99.5, 2.5, 97.5, 5.0, 95.0])
-                ciChi = np.percentile(smChi_List, [0.5, 99.5, 2.5, 97.5, 5.0, 95.0])
 
             except (TypeError, ZeroDivisionError):
-                fb_SI, sb_SI, delta_SI, ciDSI, fe, gt, ciGT, chi, ciChi = 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA'
+                fb_SI, sb_SI, delta_SI, ciDSI, fe  = 'NA', 'NA', 'NA', 'NA', 'NA'
                 
-            row.extend([fb_SI, sb_SI, delta_SI, ciDSI, fe, gt, ciGT, chi, ciChi])
+            row.extend([fb_SI, sb_SI, delta_SI, ciDSI, fe])
             xie.writerow(row)
     print((time.time()-t0)/3600)
 
@@ -289,50 +272,6 @@ def bsaseqPlot(chrmIDL, datafr, datafrT):
         i += 1
     print(f'Preparation for plotting - complete - {time.time()-t0} seconds')
 
-    # threshds = smThresholds(datafrT)
-    # misc_info.append(['Genome-wide DSI threshold and ltaSNP/totalSNP ratio threshold', threshds])
-    # print(f'Simulating genome-wide DSI threshold and ltaSNP ratio threshold - complete - {time.time()-start} seconds')
-
-    # Add 99% CI threshold line
-    # i = 1
-    # while i <= numOfChrs:
-    #     axs[2,i-1].plot([plotSP, chrEnd[i-1]], [thrshld, thrshld], c='r')
-    #     i += 1
-
-    # Identify genomic regions related to the trait
-    i = 1
-    snpRegion = []
-    while i <= numOfChrs:
-        m, peaks = 0, []
-        # Handle the case in which an QTL is at the very begining of the chromosome
-        if points[i][0][1] >= thrshld:
-            snpRegion.append(points[i][0])
-            if points[i][0][1] > points[i][1][1]:
-                peaks.append(points[i][0][1:])
-            j = 1
-
-        while m < len(points[i]) - 1:
-            if points[i][m][1] < thrshld and points[i][m+1][1] >= thrshld:
-                snpRegion.append(points[i][m+1])
-                j = 1
-            elif points[i][m][1] >= thrshld:
-                if max(points[i][m-1][1], points[i][m+1][1]) < points[i][m][1]:
-                    peaks.append(points[i][m][1:])
-                if points[i][m+1][1] > thrshld:
-                    j += 1
-                elif points[i][m+1][1] < thrshld:
-                    snpRegion[-1].extend([points[i][m][2], peaks, j])
-                    peaks = []
-            m += 1
-        # Handle the case in which an QTL is nearby the end of the chromosome
-        if points[i][-1][1] >= thrshld:
-            snpRegion[-1].extend([points[i][-1][2], peaks, j])
-
-        i += 1
-
-    # header = ['CHROM',r'ltaSNP/totalSNP','QTLStart','QTLEnd','NumOfSNPs']
-    # pd.DataFrame(snpRegion, columns=header).to_csv(os.path.join(results, 'BSASeq_results.csv'), index=False)
-
     wrnLog = os.path.join(results, 'wrnLog.csv')
     with open(wrnLog, 'w', newline='') as outF1:
         xie1 = csv.writer(outF1)
@@ -389,9 +328,8 @@ alpha, smAlpha, = 0.01, 0.1
 
 path = os.getcwd()
 currentDT = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-inFile, oiFile = os.path.join(path, args['input']), os.path.join(path,'snp_fgc.csv')
+inFile, oiFile = os.path.join(path, args['input']), os.path.join(path,'snp_si.csv')
 misc = []
-sc = [[0.1, 0.127], [0.1,0.123], [0.1,0.12], [0.1,0.113], [0.1, 0.11]]
 
 with open(inFile, 'r') as du1:   
     header = next(du1).rstrip('\t\n').split('\t')
@@ -460,15 +398,6 @@ splitDSI_CI = snpDF['DSI_CI'].str.split(expand=True).astype(float)
 snpDF['DSI_CI0005'] = splitDSI_CI[0]
 snpDF['DSI_CI0995'] = splitDSI_CI[1]
 
-snpDF['G_test'] = snpDF['G_test'].apply(lambda x: x[1:-1])
-splitGT = snpDF['G_test'].str.split(',', expand=True).astype(float)
-snpDF['G_S'] = splitGT[0]
-snpDF['G_P'] = splitGT[1]
-
-snpDF['GS_CI'] = snpDF['GS_CI'].apply(lambda x: x[1:-1])
-splitGS_CI = snpDF['GS_CI'].str.split(expand=True).astype(float)
-snpDF['GS_CI0995'] = splitGS_CI[1]
-
 snpDF['fisher_exact'] = snpDF['fisher_exact'].apply(lambda x: x[1:-1])
 splitFE = snpDF['fisher_exact'].str.split(',', expand=True).astype(float)
 snpDF['FE_P'] = splitFE[1]
@@ -490,8 +419,6 @@ for ld in ldUL:
     miscLD.append(['Dataframe filtered with quality scores', qualityDF.shape])
 
     # thrshld = smThresholds(qualityDF)[0][1]
-    thrshld = sc[ldIndex][1]
-    print(thrshld)
 
     # Filter out the entries with similar 'AD' ratio in both bulks
     fe = qualityDF[qualityDF['FE_P']<alpha]
@@ -507,9 +434,6 @@ for ld in ldUL:
     miscLD.append([f'Dataframe filtered with Fisher-Exact - p<{alpha}', fe.shape])
     # miscLD.append([f'Dataframe filtered with Fisher-Exact - p>={alpha}', nfe.shape])
     print(f'Data manipulation - complete - {time.time()-t0} seconds')
-    print(qualityDF.GS_CI0995.mean(), ld)
-    print(qualityDF.GS_CI0995.max(), ld)
-    print(qualityDF.GS_CI0995.min(), ld)
 
     msc_i = bsaseqPlot(chrmIDL, fe, qualityDF)
     miscLD.extend(msc_i)
