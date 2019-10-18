@@ -269,7 +269,7 @@ def bsaseqPlot(chrmIDL, datafr, datafrT):
             axs[ldIndex,i-1].set_xticklabels(ticks.astype(int))
 
         # chrEnd.append((swStr+swEnd)/2)
-        chrEnd.append((x[-1])
+        chrEnd.append(x[-1])
         i += 1
     print(f'Preparation for plotting - complete - {time.time()-t0} seconds')
 
