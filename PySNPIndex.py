@@ -631,7 +631,7 @@ plt.rc('figure', titlesize=22)              # fontsize of the figure title
 
 # Construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument('-i', '--input', required=False, help='file name of the GATK4-generated tsv file', default='smallTestFile.tsv')
+ap.add_argument('-i', '--input', required=False, help='file name of the GATK4-generated tsv file', default='snp_final.tsv')
 ap.add_argument('-o', '--output', required=False, help='file name of the output csv file', default='BSASeq.csv')
 ap.add_argument('-f', '--fbsize', type=int, required=False, help='number of individuals in the first bulk', default=430)
 ap.add_argument('-s', '--sbsize', type=int, required=False, help='number of individuals in the second bulk', default=385)
