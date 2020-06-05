@@ -476,7 +476,7 @@ def bsaseqPlot(chrmIDL, datafr, datafrT):
         # Replace the 'empty' values at the begining of the lists with nearest non-empty value
         for yl in [yRatio, y5, y6, y7, y8, y9]:
             if 'empty' in yl:
-                replaceZero(yRatio)
+                replaceZero(yl)
 
         pIndex = 0
         while points[i][pIndex][1] == 'empty':
